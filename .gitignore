@@ -1,0 +1,63 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# .gitignore — DevSecOps ECS Pipeline
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── Project scaffold notes (internal only) ────────────────────────────────────
+Scaffold.txt
+
+# ── Cloned upstream PetClinic repo (source was copied into src/ — not needed) ─
+spring-petclinic/
+
+# ── IAM trust policy file (created locally during AWS setup, never commit) ────
+trust-policy.json
+
+# ── Maven build output ────────────────────────────────────────────────────────
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ── Maven wrapper (keep) ──────────────────────────────────────────────────────
+.mvn/wrapper/maven-wrapper.properties
+
+# ── Terraform state and sensitive files ───────────────────────────────────────
+# State files contain resource IDs and may contain secrets — use remote state
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/terraform.tfstate.d/
+terraform/*.tfvars
+terraform/*.tfvars.json
+terraform/override.tf
+terraform/override.tf.json
+terraform/*_override.tf
+terraform/*_override.tf.json
+terraform/.terraformrc
+terraform/terraform.rc
+
+# ── AWS credentials (should never be in the repo) ────────────────────────────
+*.pem
+*.key
+credentials
+.aws/
+
+# ── IDE and editor files ──────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── OS generated files ────────────────────────────────────────────────────────
+desktop.ini
+ehthumbs.db
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+.docker/
