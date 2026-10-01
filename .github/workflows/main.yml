@@ -2,9 +2,9 @@ name: DevSecOps Pipeline — ECS on EC2
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
