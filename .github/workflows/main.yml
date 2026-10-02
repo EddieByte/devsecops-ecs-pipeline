@@ -3,27 +3,18 @@ name: DevSecOps Pipeline — ECS on EC2
 # ──────────────────────────────────────────────────────────────────────────────
 # Trigger strategy:
 #
-#   push to dev branch  → TEST job only (quality gate + SAST on every commit)
-#   pull_request → main → TEST job only (gate before merge)
-#   tag: v*.*.*         → Full pipeline: TEST → BUILD_AND_PUBLISH → DEPLOY
+#   tag: v*.*.*  → Full pipeline: TEST → BUILD_AND_PUBLISH → DEPLOY
 #
-# This means infrastructure is only touched when you deliberately cut a release
-# tag. Day-to-day dev work on the dev branch runs tests only.
-#
-# To trigger a full deployment:
+# Nothing runs on branch pushes or pull requests.
+# To trigger the pipeline, cut a release tag:
 #   git tag v1.0.0
 #   git push origin v1.0.0
 # ──────────────────────────────────────────────────────────────────────────────
 
 on:
   push:
-    branches:
-      - dev               # CI tests on every dev commit — no deploy
     tags:
       - 'v*.*.*'          # Full pipeline only on release tags (e.g. v1.0.0)
-  pull_request:
-    branches:
-      - main              # Gate PRs into main with tests before merge
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -98,7 +89,6 @@ jobs:
     name: Build, Scan & Publish to ECR
     runs-on: ubuntu-latest
     needs: TEST
-    if: startsWith(github.ref, 'refs/tags/v')
     outputs:
       image: ${{ steps.build-image.outputs.image }}
 
@@ -155,7 +145,6 @@ jobs:
     name: Deploy to ECS (EC2 Launch Type)
     runs-on: ubuntu-latest
     needs: BUILD_AND_PUBLISH
-    if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - name: Checkout source code
