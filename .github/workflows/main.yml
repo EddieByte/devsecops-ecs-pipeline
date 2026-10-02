@@ -1,10 +1,29 @@
 name: DevSecOps Pipeline — ECS on EC2
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Trigger strategy:
+#
+#   push to dev branch  → TEST job only (quality gate + SAST on every commit)
+#   pull_request → main → TEST job only (gate before merge)
+#   tag: v*.*.*         → Full pipeline: TEST → BUILD_AND_PUBLISH → DEPLOY
+#
+# This means infrastructure is only touched when you deliberately cut a release
+# tag. Day-to-day dev work on the dev branch runs tests only.
+#
+# To trigger a full deployment:
+#   git tag v1.0.0
+#   git push origin v1.0.0
+# ──────────────────────────────────────────────────────────────────────────────
+
 on:
   push:
-    branches: [main, master]
+    branches:
+      - dev               # CI tests on every dev commit — no deploy
+    tags:
+      - 'v*.*.*'          # Full pipeline only on release tags (e.g. v1.0.0)
   pull_request:
-    branches: [main, master]
+    branches:
+      - main              # Gate PRs into main with tests before merge
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -21,6 +40,7 @@ permissions:
 jobs:
   # ──────────────────────────────────────────────
   # JOB 1: Test, SAST, and Quality Gate
+  # Runs on: dev branch pushes, PRs to main, and release tags
   # ──────────────────────────────────────────────
   TEST:
     name: Test & SonarCloud Quality Gate
@@ -72,11 +92,13 @@ jobs:
 
   # ──────────────────────────────────────────────
   # JOB 2: Build Docker Image, Trivy Scan, Push to ECR
+  # Runs on: release tags only (v*.*.*)
   # ──────────────────────────────────────────────
   BUILD_AND_PUBLISH:
     name: Build, Scan & Publish to ECR
     runs-on: ubuntu-latest
     needs: TEST
+    if: startsWith(github.ref, 'refs/tags/v')
     outputs:
       image: ${{ steps.build-image.outputs.image }}
 
@@ -97,7 +119,8 @@ jobs:
       - name: Build Docker image
         id: build-image
         run: |
-          IMAGE_TAG=${{ github.run_number }}
+          # Tag with both the git tag (e.g. v1.0.0) and the run number for traceability
+          IMAGE_TAG=${{ github.ref_name }}
           docker build -t $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
           docker tag $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG $ECR_REGISTRY/$IMAGE_NAME:latest
           echo "image=$ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG" >> $GITHUB_OUTPUT
@@ -105,7 +128,7 @@ jobs:
       - name: Run Trivy vulnerability scan (CRITICAL gate)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.run_number }}
+          image-ref: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
           format: 'json'
           output: 'trivy-report.json'
           exit-code: '1'
@@ -116,21 +139,23 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-report
+          name: trivy-report-${{ github.ref_name }}
           path: trivy-report.json
 
       - name: Push image to ECR (only if Trivy gate passes)
         run: |
-          docker push $ECR_REGISTRY/$IMAGE_NAME:${{ github.run_number }}
+          docker push $ECR_REGISTRY/$IMAGE_NAME:${{ github.ref_name }}
           docker push $ECR_REGISTRY/$IMAGE_NAME:latest
 
   # ──────────────────────────────────────────────
   # JOB 3: Deploy to ECS on EC2
+  # Runs on: release tags only (v*.*.*)
   # ──────────────────────────────────────────────
   DEPLOY:
     name: Deploy to ECS (EC2 Launch Type)
     runs-on: ubuntu-latest
     needs: BUILD_AND_PUBLISH
+    if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - name: Checkout source code
@@ -142,20 +167,20 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Download task definition template
+      - name: Download live task definition from ECS
         run: |
           aws ecs describe-task-definition \
             --task-definition ${{ env.CONTAINER_NAME }} \
             --query taskDefinition \
-            > aws-files/taskdeffile.json
+            > infra/taskdeffile.json
 
       - name: Fill new image ID into ECS Task Definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: aws-files/taskdeffile.json
+          task-definition: infra/taskdeffile.json
           container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.run_number }}
+          image: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
 
       - name: Deploy ECS service with updated task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
@@ -165,7 +190,9 @@ jobs:
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
 
-      - name: Verify ALB health check (/login)
+      - name: Deployment summary
         run: |
-          echo "Deployment complete. ALB health check path: /login"
-          echo "Health check grace period: 30 seconds (configured in ECS service)"
+          echo "Deployed image tag: ${{ github.ref_name }}"
+          echo "ECS service: ${{ env.ECS_SERVICE }}"
+          echo "ALB health check: /actuator/health"
+          echo "Health check grace period: 30s"
