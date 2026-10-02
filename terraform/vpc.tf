@@ -144,7 +144,7 @@ resource "aws_security_group" "alb" {
 
 resource "aws_security_group" "ecs_ec2" {
   name        = "${var.project_name}-ecs-ec2-sg"
-  description = "ECS EC2 instances — inbound from ALB, outbound to VPC endpoints only"
+  description = "ECS EC2 instances - inbound from ALB, outbound to VPC endpoints only"
   vpc_id      = aws_vpc.main.id
 
   ingress {

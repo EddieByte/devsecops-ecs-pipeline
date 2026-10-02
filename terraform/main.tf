@@ -422,3 +422,33 @@ output "task_execution_role_arn" {
   description = "ARN of the ECS task execution IAM role"
   value       = aws_iam_role.ecs_task_execution.arn
 }
+
+# ── Secrets Manager: Pipeline Infrastructure Values ───────────────────────────
+# Terraform writes the RDS endpoint and RDS security group ID into Secrets
+# Manager after provisioning. The GitHub Actions db-migrate workflow reads
+# these at runtime — no hardcoded values in GitHub Secrets needed.
+
+resource "aws_secretsmanager_secret" "pipeline_infra" {
+  name        = "dev/pipeline/infra"
+  description = "Infrastructure values written by Terraform for use in GitHub Actions"
+
+  tags = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "pipeline_infra" {
+  secret_id = aws_secretsmanager_secret.pipeline_infra.id
+
+  secret_string = jsonencode({
+    RDS_HOST  = aws_db_instance.main.address
+    RDS_PORT  = tostring(aws_db_instance.main.port)
+    RDS_SG_ID = aws_security_group.rds.id
+    ALB_DNS   = aws_lb.main.dns_name
+  })
+}
+
+# ── Outputs ───────────────────────────────────────────────────────────────────
+
+output "pipeline_infra_secret_arn" {
+  description = "ARN of the Secrets Manager secret containing pipeline infra values"
+  value       = aws_secretsmanager_secret.pipeline_infra.arn
+}

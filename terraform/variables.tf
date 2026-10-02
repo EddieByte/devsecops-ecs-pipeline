@@ -123,7 +123,7 @@ variable "db_identifier" {
 variable "db_engine_version" {
   description = "MySQL engine version"
   type        = string
-  default     = "8.0.35"
+  default     = "8.0.46"
 }
 
 variable "db_instance_class" {

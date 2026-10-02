@@ -1,38 +1,43 @@
 name: DevSecOps Pipeline — ECS on EC2
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Trigger strategy:
+# Trigger: environment-scoped release tags only
 #
-#   tag: v*.*.*  → Full pipeline: TEST → BUILD_AND_PUBLISH → DEPLOY
+#   dev/v1.0.0   → deploys to dev environment
+#   prod/v1.0.0  → deploys to prod environment
 #
-# Nothing runs on branch pushes or pull requests.
-# To trigger the pipeline, cut a release tag:
-#   git tag v1.0.0
-#   git push origin v1.0.0
+# To trigger:
+#   git tag dev/v1.0.0 && git push origin dev/v1.0.0
+#   git tag prod/v1.0.0 && git push origin prod/v1.0.0
+#
+# Job execution order:
+#   TEST ──► DB_MIGRATE ──► BUILD_AND_PUBLISH ──► DEPLOY
 # ──────────────────────────────────────────────────────────────────────────────
 
 on:
   push:
     tags:
-      - 'v*.*.*'          # Full pipeline only on release tags (e.g. v1.0.0)
-
-env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_REGISTRY: ${{ secrets.REGISTRY }}
-  IMAGE_NAME: github-actions
-  ECS_CLUSTER: github-actions-app
-  ECS_SERVICE: github-actions-svc
-  CONTAINER_NAME: github-actions-app
+      - 'dev/v*.*.*'
+      - 'prod/v*.*.*'
 
 permissions:
-  id-token: write   # Required for OIDC token request
+  id-token: write
   contents: read
 
+env:
+  AWS_REGION:     ${{ secrets.AWS_REGION }}
+  ECR_REGISTRY:   ${{ secrets.REGISTRY }}
+  IMAGE_NAME:     github-actions
+  ECS_CLUSTER:    github-actions-app
+  ECS_SERVICE:    github-actions-svc
+  CONTAINER_NAME: github-actions-app
+  # Derives "dev" or "prod" from the tag prefix (dev/v1.0.0 → dev)
+  APP_ENV:        ${{ startsWith(github.ref_name, 'prod/') && 'prod' || 'dev' }}
+
 jobs:
-  # ──────────────────────────────────────────────
-  # JOB 1: Test, SAST, and Quality Gate
-  # Runs on: dev branch pushes, PRs to main, and release tags
-  # ──────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 1 — Test, SAST, Quality Gate
+  # ────────────────────────────────────────────────────────────────────────────
   TEST:
     name: Test & SonarCloud Quality Gate
     runs-on: ubuntu-latest
@@ -41,7 +46,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Required for SonarCloud blame data
+          fetch-depth: 0
 
       - name: Set up Java 17 (Temurin)
         uses: actions/setup-java@v4
@@ -81,14 +86,109 @@ jobs:
             exit 1
           fi
 
-  # ──────────────────────────────────────────────
-  # JOB 2: Build Docker Image, Trivy Scan, Push to ECR
-  # Runs on: release tags only (v*.*.*)
-  # ──────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 2 — Database Migration (idempotent — skips if DB already seeded)
+  # Pulls all infra values from Secrets Manager written by Terraform.
+  # Opens RDS SG for runner IP, runs migration, always revokes the rule.
+  # ────────────────────────────────────────────────────────────────────────────
+  DB_MIGRATE:
+    name: Database Migration
+    runs-on: ubuntu-latest
+    needs: TEST
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Pull infra values from Secrets Manager
+        id: infra
+        run: |
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id ${{ env.APP_ENV }}/pipeline/infra \
+            --query SecretString --output text)
+          echo "rds_host=$(echo $SECRET  | python3 -c "import sys,json; print(json.load(sys.stdin)['RDS_HOST'])")"  >> $GITHUB_OUTPUT
+          echo "rds_port=$(echo $SECRET  | python3 -c "import sys,json; print(json.load(sys.stdin)['RDS_PORT'])")"  >> $GITHUB_OUTPUT
+          echo "rds_sg_id=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['RDS_SG_ID'])")" >> $GITHUB_OUTPUT
+
+      - name: Pull DB credentials from Secrets Manager
+        id: dbcreds
+        run: |
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id ${{ env.APP_ENV }}/app/rds \
+            --query SecretString --output text)
+          DB_PASS=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['RDS_PASS'])")
+          echo "::add-mask::$DB_PASS"
+          echo "db_pass=$DB_PASS" >> $GITHUB_OUTPUT
+
+      - name: Get runner public IP
+        id: runner-ip
+        run: echo "ip=$(curl -s https://checkip.amazonaws.com)" >> $GITHUB_OUTPUT
+
+      - name: Open RDS security group for runner IP
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ steps.infra.outputs.rds_sg_id }} \
+            --protocol tcp \
+            --port ${{ steps.infra.outputs.rds_port }} \
+            --cidr ${{ steps.runner-ip.outputs.ip }}/32
+          echo "Opened 3306 for ${{ steps.runner-ip.outputs.ip }}/32"
+
+      - name: Install MySQL client
+        run: sudo apt-get install -y --no-install-recommends mysql-client
+
+      - name: Check if DB already seeded (idempotency check)
+        id: check-db
+        run: |
+          COUNT=$(mysql \
+            -h ${{ steps.infra.outputs.rds_host }} \
+            -P ${{ steps.infra.outputs.rds_port }} \
+            -u admin \
+            -p${{ steps.dbcreds.outputs.db_pass }} \
+            --ssl-mode=REQUIRED \
+            --batch --skip-column-names \
+            -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='petclinic';" 2>/dev/null || echo "0")
+          echo "table_count=$COUNT" >> $GITHUB_OUTPUT
+          echo "Tables found in petclinic DB: $COUNT"
+
+      - name: Run database migration
+        if: steps.check-db.outputs.table_count == '0'
+        run: |
+          mysql \
+            -h ${{ steps.infra.outputs.rds_host }} \
+            -P ${{ steps.infra.outputs.rds_port }} \
+            -u admin \
+            -p${{ steps.dbcreds.outputs.db_pass }} \
+            --ssl-mode=REQUIRED \
+            < src/main/resources/db_backup.sql
+          echo "Migration complete — petclinic database seeded."
+
+      - name: Skip migration (DB already seeded)
+        if: steps.check-db.outputs.table_count != '0'
+        run: echo "DB already contains ${{ steps.check-db.outputs.table_count }} tables — skipping migration."
+
+      - name: Revoke runner IP from RDS security group
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ steps.infra.outputs.rds_sg_id }} \
+            --protocol tcp \
+            --port ${{ steps.infra.outputs.rds_port }} \
+            --cidr ${{ steps.runner-ip.outputs.ip }}/32
+          echo "Revoked 3306 for ${{ steps.runner-ip.outputs.ip }}/32"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 3 — Build Docker Image, Trivy Scan, Push to ECR
+  # ────────────────────────────────────────────────────────────────────────────
   BUILD_AND_PUBLISH:
     name: Build, Scan & Publish to ECR
     runs-on: ubuntu-latest
-    needs: TEST
+    needs: DB_MIGRATE
     outputs:
       image: ${{ steps.build-image.outputs.image }}
 
@@ -109,16 +209,19 @@ jobs:
       - name: Build Docker image
         id: build-image
         run: |
-          # Tag with both the git tag (e.g. v1.0.0) and the run number for traceability
-          IMAGE_TAG=${{ github.ref_name }}
+          # Strip the env prefix from the tag: dev/v1.0.0 → v1.0.0
+          VERSION=${GITHUB_REF_NAME#*/}
+          # Final image tag: dev-v1.0.0 or prod-v1.0.0
+          IMAGE_TAG=${{ env.APP_ENV }}-${VERSION}
           docker build -t $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
-          docker tag $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG $ECR_REGISTRY/$IMAGE_NAME:latest
+          docker tag $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG $ECR_REGISTRY/$IMAGE_NAME:${{ env.APP_ENV }}-latest
           echo "image=$ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Run Trivy vulnerability scan (CRITICAL gate)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          image-ref: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.build-image.outputs.image_tag }}
           format: 'json'
           output: 'trivy-report.json'
           exit-code: '1'
@@ -129,18 +232,17 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-report-${{ github.ref_name }}
+          name: trivy-report-${{ steps.build-image.outputs.image_tag }}
           path: trivy-report.json
 
       - name: Push image to ECR (only if Trivy gate passes)
         run: |
-          docker push $ECR_REGISTRY/$IMAGE_NAME:${{ github.ref_name }}
-          docker push $ECR_REGISTRY/$IMAGE_NAME:latest
+          docker push $ECR_REGISTRY/$IMAGE_NAME:${{ steps.build-image.outputs.image_tag }}
+          docker push $ECR_REGISTRY/$IMAGE_NAME:${{ env.APP_ENV }}-latest
 
-  # ──────────────────────────────────────────────
-  # JOB 3: Deploy to ECS on EC2
-  # Runs on: release tags only (v*.*.*)
-  # ──────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 4 — Deploy to ECS on EC2
+  # ────────────────────────────────────────────────────────────────────────────
   DEPLOY:
     name: Deploy to ECS (EC2 Launch Type)
     runs-on: ubuntu-latest
@@ -169,7 +271,7 @@ jobs:
         with:
           task-definition: infra/taskdeffile.json
           container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          image: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.build-image.outputs.image_tag }}
 
       - name: Deploy ECS service with updated task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
@@ -181,7 +283,9 @@ jobs:
 
       - name: Deployment summary
         run: |
-          echo "Deployed image tag: ${{ github.ref_name }}"
-          echo "ECS service: ${{ env.ECS_SERVICE }}"
-          echo "ALB health check: /actuator/health"
-          echo "Health check grace period: 30s"
+          echo "Environment: ${{ env.APP_ENV }}"
+          echo "Tag:         ${{ github.ref_name }}"
+          echo "Image:       ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.build-image.outputs.image_tag }}"
+          echo "ECS Service: ${{ env.ECS_SERVICE }}"
+          echo "Cluster:     ${{ env.ECS_CLUSTER }}"
+          echo "Health check: /actuator/health"

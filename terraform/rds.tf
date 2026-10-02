@@ -8,7 +8,7 @@
 
 resource "aws_db_subnet_group" "main" {
   name        = "${var.project_name}-db-subnet-group"
-  description = "Private subnets for RDS MySQL — not internet accessible"
+  description = "Private subnets for RDS MySQL - not internet accessible"
   subnet_ids  = aws_subnet.private[*].id
 
   tags = merge(var.tags, { Name = "${var.project_name}-db-subnet-group" })
@@ -85,14 +85,13 @@ resource "aws_db_instance" "main" {
   backup_window             = "03:00-04:00"
   maintenance_window        = "sun:04:00-sun:05:00"
   auto_minor_version_upgrade = true
-  deletion_protection       = true
+  deletion_protection       = false
   skip_final_snapshot       = false
   final_snapshot_identifier = "${var.db_identifier}-final-snapshot"
 
-  # Monitoring
-  performance_insights_enabled = true
-  monitoring_interval          = 60
-  enabled_cloudwatch_logs_exports = ["error", "slowquery"]
+  # Monitoring — enhanced monitoring disabled for dev (requires a separate IAM role)
+  performance_insights_enabled = false
+  monitoring_interval          = 0
 
   tags = merge(var.tags, { Name = "${var.project_name}-mysql-db" })
 }
