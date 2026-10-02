@@ -8,8 +8,9 @@ Scaffold.txt
 # ── Cloned upstream PetClinic repo (source was copied into src/ — not needed) ─
 spring-petclinic/
 
-# ── IAM trust policy file (created locally during AWS setup, never commit) ────
+# IAM trust policy files (created locally during AWS setup, never commit)
 trust-policy.json
+trust-policy-compact.json
 
 # ── Maven build output ────────────────────────────────────────────────────────
 target/
