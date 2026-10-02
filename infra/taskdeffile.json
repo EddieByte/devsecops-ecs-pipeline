@@ -31,11 +31,11 @@
       "secrets": [
         {
           "name": "MYSQL_USER",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT_ID:secret:prod/app/rds:RDS_USER::"
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT_ID:secret:dev/app/rds:RDS_USER::"
         },
         {
           "name": "MYSQL_PASS",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT_ID:secret:prod/app/rds:RDS_PASS::"
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT_ID:secret:dev/app/rds:RDS_PASS::"
         }
       ],
       "logConfiguration": {
@@ -63,7 +63,7 @@
   "volumes": [],
   "tags": [
     { "key": "Project",     "value": "github-actions-app" },
-    { "key": "Environment", "value": "production" },
+    { "key": "Environment", "value": "dev" },
     { "key": "ManagedBy",   "value": "terraform" }
   ]
 }

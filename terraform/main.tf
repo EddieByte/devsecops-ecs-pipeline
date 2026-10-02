@@ -327,12 +327,12 @@ resource "aws_ecs_task_definition" "app" {
         {
           # PetClinic native env var name for the DB username
           name      = "MYSQL_USER"
-          valueFrom = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:prod/app/rds:RDS_USER::"
+          valueFrom = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:dev/app/rds:RDS_USER::"
         },
         {
           # PetClinic native env var name for the DB password
           name      = "MYSQL_PASS"
-          valueFrom = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:prod/app/rds:RDS_PASS::"
+          valueFrom = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:dev/app/rds:RDS_PASS::"
         }
       ]
 

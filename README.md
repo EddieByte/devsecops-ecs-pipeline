@@ -169,7 +169,7 @@ The pipeline enforces a "Zero Critical Vulnerabilities" policy programmatically 
 .
 ├── .github/workflows/
 │   └── main.yml                    # DevSecOps pipeline (OIDC + Trivy + SonarCloud)
-├── aws-files/
+├── infra/
 │   └── taskdeffile.json            # ECS Task Definition with Secrets Manager mapping
 ├── terraform/
 │   ├── main.tf                     # ECS Cluster, Capacity Provider, IAM, ECR, Service
@@ -230,8 +230,8 @@ Copy-Item -Recurse -Force spring-petclinic\src `
 |---|---|---|---|
 | `SPRING_PROFILES_ACTIVE` | Plain env var | Task def | Activates `mysql` profile |
 | `MYSQL_URL` | Plain env var | Task def | Full JDBC URL pointing to RDS endpoint |
-| `MYSQL_USER` | Secret | Secrets Manager → `prod/app/rds:RDS_USER` | DB username |
-| `MYSQL_PASS` | Secret | Secrets Manager → `prod/app/rds:RDS_PASS` | DB password |
+| `MYSQL_USER` | Secret | Secrets Manager → `dev/app/rds:RDS_USER` | DB username |
+| `MYSQL_PASS` | Secret | Secrets Manager → `dev/app/rds:RDS_PASS` | DB password |
 
 ### One-time RDS database bootstrap
 

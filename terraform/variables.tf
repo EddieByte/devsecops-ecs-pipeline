@@ -11,9 +11,9 @@ variable "project_name" {
 }
 
 variable "environment" {
-  description = "Deployment environment (e.g., prod, staging)"
+  description = "Deployment environment (e.g., dev, staging, prod)"
   type        = string
-  default     = "prod"
+  default     = "dev"
 }
 
 # ── Networking ─────────────────────────────────────────────────────────────────
@@ -178,7 +178,7 @@ variable "tags" {
   type        = map(string)
   default = {
     Project     = "github-actions-app"
-    Environment = "prod"
+    Environment = "dev"
     ManagedBy   = "terraform"
   }
 }
