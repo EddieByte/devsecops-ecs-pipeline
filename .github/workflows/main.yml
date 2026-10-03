@@ -51,7 +51,7 @@ jobs:
       - name: Set up Java 17 (Temurin)
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
           cache: maven
 
@@ -206,7 +206,7 @@ jobs:
       - name: Set up Java 17 (Temurin)
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
           cache: maven
 

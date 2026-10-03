@@ -279,11 +279,11 @@
         </executions>
       </plugin>
 
-      <!-- SonarCloud -->
+      <!-- SonarCloud — Java 21 required by scanner as of SonarQube 2025.6 -->
       <plugin>
         <groupId>org.sonarsource.scanner.maven</groupId>
         <artifactId>sonar-maven-plugin</artifactId>
-        <version>3.11.0.3922</version>
+        <version>5.6.0.24836</version>
       </plugin>
 
     </plugins>
