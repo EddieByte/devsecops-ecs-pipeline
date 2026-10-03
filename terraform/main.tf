@@ -356,8 +356,9 @@ output "task_execution_role_arn" {
 # these at runtime — no hardcoded values in GitHub Secrets needed.
 
 resource "aws_secretsmanager_secret" "pipeline_infra" {
-  name        = "dev/pipeline/infra"
-  description = "Infrastructure values written by Terraform for use in GitHub Actions"
+  name                    = "dev/pipeline/infra"
+  description             = "Infrastructure values written by Terraform for use in GitHub Actions"
+  recovery_window_in_days = 0
 
   tags = var.tags
 }
