@@ -41,11 +41,6 @@
     <sonar.java.binaries>target/classes</sonar.java.binaries>
     <sonar.junit.reportsPath>target/surefire-reports</sonar.junit.reportsPath>
     <sonar.jacoco.reportsPath>target/jacoco.exec</sonar.jacoco.reportsPath>
-
-    <!-- Checkstyle -->
-    <checkstyle.config.location>google_checks.xml</checkstyle.config.location>
-    <checkstyle.failsOnError>false</checkstyle.failsOnError>
-    <checkstyle.failOnViolation>false</checkstyle.failOnViolation>
   </properties>
 
   <!-- ── Dependencies ────────────────────────────────────────────────────── -->
@@ -243,21 +238,6 @@
             <exclude>**/PostgresIntegrationTests.java</exclude>
           </excludes>
           <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
-        </configuration>
-      </plugin>
-
-      <!-- Checkstyle -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>3.3.1</version>
-        <configuration>
-          <configLocation>${checkstyle.config.location}</configLocation>
-          <outputFile>${project.build.directory}/checkstyle-result.xml</outputFile>
-          <encoding>UTF-8</encoding>
-          <consoleOutput>true</consoleOutput>
-          <failsOnError>${checkstyle.failsOnError}</failsOnError>
-          <failOnViolation>${checkstyle.failOnViolation}</failOnViolation>
         </configuration>
       </plugin>
 
