@@ -56,7 +56,7 @@ jobs:
           cache: maven
 
       - name: Run Maven tests and Checkstyle
-        run: mvn test checkstyle:checkstyle
+        run: mvn clean test checkstyle:checkstyle
 
       - name: SonarCloud Scan
         env:
@@ -79,7 +79,7 @@ jobs:
         run: |
           STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
             "https://sonarcloud.io/api/qualitygates/project_status?projectKey=${{ secrets.SONAR_PROJECT_KEY }}" \
-            | python3 -c "import sys, json; print(json.load(sys.stdin)['projectStatus']['status'])")
+            | jq -r '.projectStatus.status')
           echo "Quality Gate Status: $STATUS"
           if [ "$STATUS" != "OK" ]; then
             echo "Quality Gate FAILED. Blocking pipeline."
@@ -88,8 +88,10 @@ jobs:
 
   # ────────────────────────────────────────────────────────────────────────────
   # JOB 2 — Database Migration (idempotent — skips if DB already seeded)
-  # Pulls all infra values from Secrets Manager written by Terraform.
-  # Opens RDS SG for runner IP, runs migration, always revokes the rule.
+  #
+  # Uses GITHUB_ENV for RDS_SG_ID and RUNNER_IP so the always() revoke step
+  # can access them even when an earlier step in this job fails.
+  # Uses jq for all JSON parsing — available by default on ubuntu runners.
   # ────────────────────────────────────────────────────────────────────────────
   DB_MIGRATE:
     name: Database Migration
@@ -107,37 +109,37 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Pull infra values from Secrets Manager
-        id: infra
         run: |
           SECRET=$(aws secretsmanager get-secret-value \
             --secret-id ${{ env.APP_ENV }}/pipeline/infra \
             --query SecretString --output text)
-          echo "rds_host=$(echo $SECRET  | python3 -c "import sys,json; print(json.load(sys.stdin)['RDS_HOST'])")"  >> $GITHUB_OUTPUT
-          echo "rds_port=$(echo $SECRET  | python3 -c "import sys,json; print(json.load(sys.stdin)['RDS_PORT'])")"  >> $GITHUB_OUTPUT
-          echo "rds_sg_id=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['RDS_SG_ID'])")" >> $GITHUB_OUTPUT
+          # Write to GITHUB_ENV so all subsequent steps — including always() ones — can read them
+          echo "RDS_HOST=$(echo $SECRET  | jq -r '.RDS_HOST')"  >> $GITHUB_ENV
+          echo "RDS_PORT=$(echo $SECRET  | jq -r '.RDS_PORT')"  >> $GITHUB_ENV
+          echo "RDS_SG_ID=$(echo $SECRET | jq -r '.RDS_SG_ID')" >> $GITHUB_ENV
 
       - name: Pull DB credentials from Secrets Manager
-        id: dbcreds
         run: |
           SECRET=$(aws secretsmanager get-secret-value \
             --secret-id ${{ env.APP_ENV }}/app/rds \
             --query SecretString --output text)
-          DB_PASS=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['RDS_PASS'])")
+          DB_PASS=$(echo $SECRET | jq -r '.RDS_PASS')
           echo "::add-mask::$DB_PASS"
-          echo "db_pass=$DB_PASS" >> $GITHUB_OUTPUT
+          echo "DB_PASS=$DB_PASS" >> $GITHUB_ENV
 
       - name: Get runner public IP
-        id: runner-ip
-        run: echo "ip=$(curl -s https://checkip.amazonaws.com)" >> $GITHUB_OUTPUT
+        run: |
+          RUNNER_IP=$(curl -s https://checkip.amazonaws.com)
+          echo "RUNNER_IP=$RUNNER_IP" >> $GITHUB_ENV
 
       - name: Open RDS security group for runner IP
         run: |
           aws ec2 authorize-security-group-ingress \
-            --group-id ${{ steps.infra.outputs.rds_sg_id }} \
+            --group-id ${{ env.RDS_SG_ID }} \
             --protocol tcp \
-            --port ${{ steps.infra.outputs.rds_port }} \
-            --cidr ${{ steps.runner-ip.outputs.ip }}/32
-          echo "Opened 3306 for ${{ steps.runner-ip.outputs.ip }}/32"
+            --port ${{ env.RDS_PORT }} \
+            --cidr ${{ env.RUNNER_IP }}/32
+          echo "Opened port 3306 for ${{ env.RUNNER_IP }}/32"
 
       - name: Install MySQL client
         run: sudo apt-get install -y --no-install-recommends mysql-client
@@ -146,24 +148,24 @@ jobs:
         id: check-db
         run: |
           COUNT=$(mysql \
-            -h ${{ steps.infra.outputs.rds_host }} \
-            -P ${{ steps.infra.outputs.rds_port }} \
+            -h ${{ env.RDS_HOST }} \
+            -P ${{ env.RDS_PORT }} \
             -u admin \
-            -p${{ steps.dbcreds.outputs.db_pass }} \
+            -p${{ env.DB_PASS }} \
             --ssl-mode=REQUIRED \
             --batch --skip-column-names \
             -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='petclinic';" 2>/dev/null || echo "0")
           echo "table_count=$COUNT" >> $GITHUB_OUTPUT
-          echo "Tables found in petclinic DB: $COUNT"
+          echo "Tables found in petclinic schema: $COUNT"
 
       - name: Run database migration
         if: steps.check-db.outputs.table_count == '0'
         run: |
           mysql \
-            -h ${{ steps.infra.outputs.rds_host }} \
-            -P ${{ steps.infra.outputs.rds_port }} \
+            -h ${{ env.RDS_HOST }} \
+            -P ${{ env.RDS_PORT }} \
             -u admin \
-            -p${{ steps.dbcreds.outputs.db_pass }} \
+            -p${{ env.DB_PASS }} \
             --ssl-mode=REQUIRED \
             < src/main/resources/db_backup.sql
           echo "Migration complete — petclinic database seeded."
@@ -175,26 +177,41 @@ jobs:
       - name: Revoke runner IP from RDS security group
         if: always()
         run: |
-          aws ec2 revoke-security-group-ingress \
-            --group-id ${{ steps.infra.outputs.rds_sg_id }} \
-            --protocol tcp \
-            --port ${{ steps.infra.outputs.rds_port }} \
-            --cidr ${{ steps.runner-ip.outputs.ip }}/32
-          echo "Revoked 3306 for ${{ steps.runner-ip.outputs.ip }}/32"
+          if [ -n "${{ env.RDS_SG_ID }}" ] && [ -n "${{ env.RUNNER_IP }}" ]; then
+            aws ec2 revoke-security-group-ingress \
+              --group-id ${{ env.RDS_SG_ID }} \
+              --protocol tcp \
+              --port ${{ env.RDS_PORT }} \
+              --cidr ${{ env.RUNNER_IP }}/32
+            echo "Revoked port 3306 for ${{ env.RUNNER_IP }}/32"
+          else
+            echo "RDS_SG_ID or RUNNER_IP not set — nothing to revoke."
+          fi
 
   # ────────────────────────────────────────────────────────────────────────────
   # JOB 3 — Build Docker Image, Trivy Scan, Push to ECR
+  # Maven package runs explicitly here before Docker build for layer caching.
   # ────────────────────────────────────────────────────────────────────────────
   BUILD_AND_PUBLISH:
     name: Build, Scan & Publish to ECR
     runs-on: ubuntu-latest
     needs: DB_MIGRATE
     outputs:
-      image: ${{ steps.build-image.outputs.image }}
+      image_tag: ${{ steps.build-image.outputs.image_tag }}
 
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
+
+      - name: Set up Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Package application JAR
+        run: mvn package -DskipTests -B --no-transfer-progress
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -209,13 +226,11 @@ jobs:
       - name: Build Docker image
         id: build-image
         run: |
-          # Strip the env prefix from the tag: dev/v1.0.0 → v1.0.0
+          # Strip env prefix from tag: dev/v1.0.0 → v1.0.0, then prepend env: dev-v1.0.0
           VERSION=${GITHUB_REF_NAME#*/}
-          # Final image tag: dev-v1.0.0 or prod-v1.0.0
           IMAGE_TAG=${{ env.APP_ENV }}-${VERSION}
           docker build -t $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
           docker tag $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG $ECR_REGISTRY/$IMAGE_NAME:${{ env.APP_ENV }}-latest
-          echo "image=$ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG" >> $GITHUB_OUTPUT
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Run Trivy vulnerability scan (CRITICAL gate)
@@ -271,7 +286,7 @@ jobs:
         with:
           task-definition: infra/taskdeffile.json
           container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.build-image.outputs.image_tag }}
+          image: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.BUILD_AND_PUBLISH.outputs.image_tag }}
 
       - name: Deploy ECS service with updated task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
@@ -283,9 +298,9 @@ jobs:
 
       - name: Deployment summary
         run: |
-          echo "Environment: ${{ env.APP_ENV }}"
-          echo "Tag:         ${{ github.ref_name }}"
-          echo "Image:       ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.build-image.outputs.image_tag }}"
-          echo "ECS Service: ${{ env.ECS_SERVICE }}"
-          echo "Cluster:     ${{ env.ECS_CLUSTER }}"
+          echo "Environment:  ${{ env.APP_ENV }}"
+          echo "Tag:          ${{ github.ref_name }}"
+          echo "Image:        ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.BUILD_AND_PUBLISH.outputs.image_tag }}"
+          echo "ECS Service:  ${{ env.ECS_SERVICE }}"
+          echo "Cluster:      ${{ env.ECS_CLUSTER }}"
           echo "Health check: /actuator/health"

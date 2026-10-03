@@ -272,3 +272,21 @@ This creates the `petclinic` database, the `petclinic` user, all 7 tables, and t
 - **Secrets:** AWS Secrets Manager (via PrivateLink)
 - **Access:** AWS SSM Session Manager (no SSH, no Bastion)
 - **Observability:** Amazon CloudWatch Logs, ECS Container Insights
+
+---
+
+## Troubleshooting
+
+Real issues encountered during the build of this pipeline, with root causes and verified fixes.
+
+| Issue | Root Cause | Resolution |
+|---|---|---|
+| `MalformedPolicyDocument` when creating IAM role | PowerShell here-strings write UTF-8 BOM when piped to AWS CLI. AWS JSON parser rejects the BOM. | Write policy files using `[System.IO.File]::WriteAllText(..., [System.Text.Encoding]::ASCII)` then pass with `file://`. |
+| Non-ASCII characters in Terraform `description` fields cause HTTP 400 | Em dashes (`—`) in `description =` strings are rejected by AWS APIs which only accept ASCII. | Replace all em dashes with plain hyphens (`-`) in every Terraform resource description. |
+| `Cannot find version 8.0.35 for mysql` during RDS creation | AWS RDS does not expose every minor MySQL version as a selectable engine version — minor upgrades are managed automatically. | Pin to an available version: run `aws rds describe-db-engine-versions --engine mysql` and use the latest listed 8.0.x (currently `8.0.46`). |
+| `A MonitoringRoleARN value is required if MonitoringInterval != 0` | Enhanced Monitoring requires a dedicated IAM role ARN passed alongside the interval. | For dev environments set `monitoring_interval = 0` to disable enhanced monitoring entirely. |
+| Terraform state disconnect during long RDS creation | DNS timeouts on the local machine during the ~10 minute RDS provisioning window cause the AWS provider to lose its polling connection, leaving the real resource untracked in local state. | Re-synchronise with `terraform state rm aws_db_instance.main` then `terraform import aws_db_instance.main <identifier>`, then re-run `terraform apply`. |
+| `Cannot delete protected DB Instance` during `terraform apply` | `deletion_protection = true` on the RDS instance blocks Terraform from replacing it when state drift is detected. | Set `deletion_protection = false` in `rds.tf` for dev environments to allow Terraform to manage the full lifecycle. |
+| Database migration cannot reach RDS in private subnet | ECS private subnets have no internet route (`0.0.0.0/0` intentionally absent). GitHub Actions runners cannot reach RDS directly. | Use GitHub Actions OIDC to fetch the runner public IP, temporarily authorise port 3306 in the RDS security group, run the migration, and always revoke the rule in an `if: always()` cleanup step. |
+| `PowerShell single-quoted JSON mangled by AWS CLI` | PowerShell does not protect special characters inside single-quoted strings the same way bash does — the AWS CLI receives corrupted JSON. | Pass JSON via a file written with `[System.IO.File]::WriteAllText` using ASCII encoding, or use the compact single-line form written to a temp file. |
+| SSO session expiry mid-Terraform apply | AWS SSO tokens expire after a few hours. Long applies (RDS) can outlast the session, causing `no such host` DNS errors. | Run `aws sso login --profile <profile>` and re-export `$env:AWS_PROFILE` before re-running `terraform apply`. Terraform will reconcile existing resources without duplication. |
