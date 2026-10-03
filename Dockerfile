@@ -43,7 +43,7 @@ FROM eclipse-temurin:17-jre-jammy AS runtime
 
 LABEL maintainer="devops@example.com" \
       org.opencontainers.image.title="spring-petclinic" \
-      org.opencontainers.image.description="Spring PetClinic on Java 17 / Embedded Tomcat" \
+      org.opencontainers.image.description="Spring PetClinic on Java 17 / Embedded Tomcat (Spring Boot 4.x)" \
       org.opencontainers.image.base.name="eclipse-temurin:17-jre-jammy"
 
 WORKDIR /app
