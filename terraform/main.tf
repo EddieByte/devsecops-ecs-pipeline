@@ -4,26 +4,6 @@
 #            CloudWatch Log Group, and AWS Secrets Manager reference.
 # ──────────────────────────────────────────────────────────────────────────────
 
-terraform {
-  required_version = ">= 1.6.0"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-
-  # Uncomment to use S3 remote state (recommended for production)
-  # backend "s3" {
-  #   bucket         = "your-tf-state-bucket"
-  #   key            = "devsecops-ecs/terraform.tfstate"
-  #   region         = "us-east-1"
-  #   encrypt        = true
-  #   dynamodb_table = "tf-state-lock"
-  # }
-}
-
 provider "aws" {
   region = var.aws_region
 }
@@ -36,54 +16,6 @@ data "aws_ssm_parameter" "ecs_optimized_ami" {
 }
 
 data "aws_caller_identity" "current" {}
-
-# ── ECR Repository ────────────────────────────────────────────────────────────
-
-resource "aws_ecr_repository" "app" {
-  name                 = var.ecr_repository_name
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  encryption_configuration {
-    encryption_type = "AES256"
-  }
-
-  tags = merge(var.tags, { Name = var.ecr_repository_name })
-}
-
-resource "aws_ecr_lifecycle_policy" "app" {
-  repository = aws_ecr_repository.app.name
-
-  policy = jsonencode({
-    rules = [
-      {
-        rulePriority = 1
-        description  = "Keep last 10 tagged images"
-        selection = {
-          tagStatus     = "tagged"
-          tagPrefixList = ["v", "latest"]
-          countType     = "imageCountMoreThan"
-          countNumber   = 10
-        }
-        action = { type = "expire" }
-      },
-      {
-        rulePriority = 2
-        description  = "Remove untagged images older than 7 days"
-        selection = {
-          tagStatus   = "untagged"
-          countType   = "sinceImagePushed"
-          countUnit   = "days"
-          countNumber = 7
-        }
-        action = { type = "expire" }
-      }
-    ]
-  })
-}
 
 # ── CloudWatch Log Group ──────────────────────────────────────────────────────
 
@@ -411,11 +343,6 @@ output "ecs_cluster_name" {
 output "ecs_service_name" {
   description = "ECS service name"
   value       = aws_ecs_service.app.name
-}
-
-output "ecr_repository_url" {
-  description = "ECR repository URL"
-  value       = aws_ecr_repository.app.repository_url
 }
 
 output "task_execution_role_arn" {
