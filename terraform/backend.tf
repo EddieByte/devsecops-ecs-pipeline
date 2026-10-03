@@ -33,12 +33,12 @@ terraform {
     }
   }
 
-  # ── Remote State (uncomment to activate) ──────────────────────────────────
-  # backend "s3" {
-  #   bucket       = "github-actions-tfstate-489205146758"
-  #   key          = "dev/ecs-ec2-pipeline.tfstate"
-  #   region       = "us-east-1"
-  #   encrypt      = true
-  #   use_lockfile = true   # Native S3 locking — no DynamoDB required (>= 1.11.0)
-  # }
+  # ── Remote State ──────────────────────────────────────────────────────────
+  backend "s3" {
+    bucket       = "github-actions-tfstate-489205146758"
+    key          = "dev/ecs-ec2-pipeline.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true   # Native S3 locking — no DynamoDB required (>= 1.11.0)
+  }
 }
