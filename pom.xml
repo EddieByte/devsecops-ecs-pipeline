@@ -97,6 +97,12 @@
       <scope>runtime</scope>
     </dependency>
 
+    <!-- JCache API — required by CacheConfiguration.java (javax.cache.configuration) -->
+    <dependency>
+      <groupId>javax.cache</groupId>
+      <artifactId>cache-api</artifactId>
+    </dependency>
+
     <!-- MySQL Connector/J -->
     <dependency>
       <groupId>com.mysql</groupId>
