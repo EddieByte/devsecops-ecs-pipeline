@@ -58,11 +58,11 @@ jobs:
       - name: Run Maven tests and Checkstyle
         run: mvn clean test checkstyle:checkstyle
 
-      - name: SonarCloud Scan
+      - name: SonarCloud Scan & Quality Gate
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          mvn -U sonar:sonar \
+          mvn -B -U sonar:sonar \
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
             -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} \
             -Dsonar.host.url=https://sonarcloud.io \
@@ -71,20 +71,8 @@ jobs:
             -Dsonar.java.binaries=target/classes \
             -Dsonar.junit.reportsPath=target/surefire-reports/ \
             -Dsonar.jacoco.reportsPath=target/jacoco.exec \
-            -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml
-
-      - name: Check SonarCloud Quality Gate (Bugs > 35 = FAIL)
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
-            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=${{ secrets.SONAR_PROJECT_KEY }}" \
-            | jq -r '.projectStatus.status')
-          echo "Quality Gate Status: $STATUS"
-          if [ "$STATUS" != "OK" ]; then
-            echo "Quality Gate FAILED. Blocking pipeline."
-            exit 1
-          fi
+            -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml \
+            -Dsonar.qualitygate.wait=true
 
   # ────────────────────────────────────────────────────────────────────────────
   # JOB 2 — Database Migration (idempotent — skips if DB already seeded)
