@@ -116,9 +116,13 @@
       <scope>runtime</scope>
     </dependency>
 
-    <!-- Flyway MySQL — runs versioned migrations on startup inside the VPC.
-         Eliminates the external DB_MIGRATE pipeline job entirely.
-         flyway-mysql includes the MySQL-specific dialect support. -->
+    <!-- Flyway — runs versioned migrations on startup inside the VPC.
+         spring-boot-starter-flyway wires Flyway into Boot auto-config.
+         flyway-mysql adds the MySQL dialect support. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-mysql</artifactId>
