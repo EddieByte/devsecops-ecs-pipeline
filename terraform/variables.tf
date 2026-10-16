@@ -171,6 +171,18 @@ variable "secrets_manager_arn" {
   default     = ""
 }
 
+# ── GitHub OIDC ───────────────────────────────────────────────────────────────
+
+variable "github_org" {
+  description = "GitHub organisation or user account (e.g. 'my-org'). Used to scope the OIDC trust policy."
+  type        = string
+}
+
+variable "github_repo" {
+  description = "GitHub repository name without the org prefix (e.g. 'devsecops-ecs-pipeline'). Used to scope the OIDC trust policy."
+  type        = string
+}
+
 # ── Tagging ───────────────────────────────────────────────────────────────────
 
 variable "tags" {

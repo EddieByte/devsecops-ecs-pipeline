@@ -81,13 +81,12 @@ resource "aws_db_instance" "main" {
   port                 = 3306
 
   # Backup & Maintenance
-  backup_retention_period   = var.db_backup_retention_days
+  backup_retention_period = 0
   backup_window             = "03:00-04:00"
   maintenance_window        = "sun:04:00-sun:05:00"
   auto_minor_version_upgrade = true
   deletion_protection       = false
-  skip_final_snapshot       = false
-  final_snapshot_identifier = "${var.db_identifier}-final-snapshot"
+  skip_final_snapshot = true
 
   # Monitoring — enhanced monitoring disabled for dev (requires a separate IAM role)
   performance_insights_enabled = false
