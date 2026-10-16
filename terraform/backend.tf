@@ -1,5 +1,5 @@
-# ──────────────────────────────────────────────────────────────────────────────
-# backend.tf — Terraform Version Constraints & S3 Remote State Backend
+﻿# ------------------------------------------------------------------------------
+# backend.tf - Terraform Version Constraints & S3 Remote State Backend
 #
 # Terraform >= 1.11.0 supports native S3 state locking via conditional writes
 # (use_lockfile = true). This eliminates the need for a DynamoDB lock table,
@@ -18,10 +18,10 @@
 #      Terraform will copy the local state into S3 automatically.
 #
 # WHY NO DYNAMODB:
-#   Terraform 1.11+ uses S3 conditional writes for locking — a lightweight
+#   Terraform 1.11+ uses S3 conditional writes for locking - a lightweight
 #   object-level lock file is written to the same bucket. No separate
 #   DynamoDB table or IAM permissions for DynamoDB are required.
-# ──────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 terraform {
   required_version = ">= 1.11.0"
@@ -33,12 +33,12 @@ terraform {
     }
   }
 
-  # ── Remote State ──────────────────────────────────────────────────────────
+  # -- Remote State ----------------------------------------------------------
   backend "s3" {
     bucket       = "github-actions-tfstate-997450571655"
     key          = "dev/ecs-ec2-pipeline.tfstate"
     region       = "us-east-1"
     encrypt      = true
-    use_lockfile = true   # Native S3 locking — no DynamoDB required (>= 1.11.0)
+    use_lockfile = true   # Native S3 locking - no DynamoDB required (>= 1.11.0)
   }
 }

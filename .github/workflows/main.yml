@@ -1,18 +1,18 @@
-﻿name: DevSecOps Pipeline â€” ECS on EC2
+﻿name: DevSecOps Pipeline  ECS on EC2
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# 
 # Trigger: environment-scoped release tags only
 #
-#   dev/v1.0.0   â†’ deploys to dev environment
-#   prod/v1.0.0  â†’ deploys to prod environment
+#   dev/v1.0.0    deploys to dev environment
+#   prod/v1.0.0   deploys to prod environment
 #
 # To trigger:
 #   git tag dev/v1.0.0 && git push origin dev/v1.0.0
 #   git tag prod/v1.0.0 && git push origin prod/v1.0.0
 #
 # Job execution order:
-#   TEST â”€â”€â–º DB_MIGRATE â”€â”€â–º BUILD_AND_PUBLISH â”€â”€â–º DEPLOY
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+#   TEST - DB_MIGRATE - BUILD_AND_PUBLISH - DEPLOY
+# 
 
 on:
   push:
@@ -31,13 +31,13 @@ env:
   ECS_CLUSTER:    github-actions-app
   ECS_SERVICE:    github-actions-svc
   CONTAINER_NAME: github-actions-app
-  # Derives "dev" or "prod" from the tag prefix (dev/v1.0.0 â†’ dev)
+  # Derives "dev" or "prod" from the tag prefix (dev/v1.0.0  dev)
   APP_ENV:        ${{ startsWith(github.ref_name, 'prod/') && 'prod' || 'dev' }}
 
 jobs:
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  # JOB 1 â€” Test, SAST, Quality Gate
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # 
+  # JOB 1  Test, SAST, Quality Gate
+  # 
   TEST:
     name: Test & SonarCloud Quality Gate
     runs-on: ubuntu-latest
@@ -73,13 +73,13 @@ jobs:
             -Dsonar.jacoco.reportsPath=target/jacoco.exec \
             -Dsonar.qualitygate.wait=true
 
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  # JOB 2 â€” Database Migration (idempotent â€” skips if DB already seeded)
+  # 
+  # JOB 2  Database Migration (idempotent  skips if DB already seeded)
   #
   # Uses GITHUB_ENV for RDS_SG_ID and RUNNER_IP so the always() revoke step
   # can access them even when an earlier step in this job fails.
-  # Uses jq for all JSON parsing â€” available by default on ubuntu runners.
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # Uses jq for all JSON parsing  available by default on ubuntu runners.
+  # 
   DB_MIGRATE:
     name: Database Migration
     runs-on: ubuntu-latest
@@ -100,7 +100,7 @@ jobs:
           SECRET=$(aws secretsmanager get-secret-value \
             --secret-id ${{ env.APP_ENV }}/pipeline/infra \
             --query SecretString --output text)
-          # Write to GITHUB_ENV so all subsequent steps â€” including always() ones â€” can read them
+          # Write to GITHUB_ENV so all subsequent steps  including always() ones  can read them
           echo "RDS_HOST=$(echo $SECRET  | jq -r '.RDS_HOST')"  >> $GITHUB_ENV
           echo "RDS_PORT=$(echo $SECRET  | jq -r '.RDS_PORT')"  >> $GITHUB_ENV
           echo "RDS_SG_ID=$(echo $SECRET | jq -r '.RDS_SG_ID')" >> $GITHUB_ENV
@@ -155,11 +155,11 @@ jobs:
             -p${{ env.DB_PASS }} \
             --ssl-mode=REQUIRED \
             < src/main/resources/db_backup.sql
-          echo "Migration complete â€” petclinic database seeded."
+          echo "Migration complete  petclinic database seeded."
 
       - name: Skip migration (DB already seeded)
         if: steps.check-db.outputs.table_count != '0'
-        run: echo "DB already contains ${{ steps.check-db.outputs.table_count }} tables â€” skipping migration."
+        run: echo "DB already contains ${{ steps.check-db.outputs.table_count }} tables  skipping migration."
 
       - name: Revoke runner IP from RDS security group
         if: always()
@@ -172,13 +172,13 @@ jobs:
               --cidr ${{ env.RUNNER_IP }}/32
             echo "Revoked port 3306 for ${{ env.RUNNER_IP }}/32"
           else
-            echo "RDS_SG_ID or RUNNER_IP not set â€” nothing to revoke."
+            echo "RDS_SG_ID or RUNNER_IP not set  nothing to revoke."
           fi
 
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  # JOB 3 â€” Build Docker Image, Trivy Scan, Push to ECR
+  # 
+  # JOB 3  Build Docker Image, Trivy Scan, Push to ECR
   # Maven package runs explicitly here before Docker build for layer caching.
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # 
   BUILD_AND_PUBLISH:
     name: Build, Scan & Publish to ECR
     runs-on: ubuntu-latest
@@ -213,7 +213,7 @@ jobs:
       - name: Build Docker image
         id: build-image
         run: |
-          # Strip env prefix from tag: dev/v1.0.0 â†’ v1.0.0, then prepend env: dev-v1.0.0
+          # Strip env prefix from tag: dev/v1.0.0  v1.0.0, then prepend env: dev-v1.0.0
           VERSION=${GITHUB_REF_NAME#*/}
           IMAGE_TAG=${{ env.APP_ENV }}-${VERSION}
           docker build -t $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
@@ -242,9 +242,9 @@ jobs:
           docker push $ECR_REGISTRY/$IMAGE_NAME:${{ steps.build-image.outputs.image_tag }}
           docker push $ECR_REGISTRY/$IMAGE_NAME:${{ env.APP_ENV }}-latest
 
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  # JOB 4 â€” Deploy to ECS on EC2
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # 
+  # JOB 4  Deploy to ECS on EC2
+  # 
   DEPLOY:
     name: Deploy to ECS (EC2 Launch Type)
     runs-on: ubuntu-latest

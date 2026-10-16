@@ -1,4 +1,4 @@
-variable "aws_region" {
+﻿variable "aws_region" {
   description = "AWS region to deploy all resources"
   type        = string
   default     = "us-east-1"
@@ -16,7 +16,7 @@ variable "environment" {
   default     = "dev"
 }
 
-# ── Networking ─────────────────────────────────────────────────────────────────
+# -- Networking -----------------------------------------------------------------
 
 variable "vpc_cidr" {
   description = "CIDR block for the VPC"
@@ -42,7 +42,7 @@ variable "availability_zones" {
   default     = ["us-east-1a", "us-east-1b"]
 }
 
-# ── ECS / EC2 Compute ──────────────────────────────────────────────────────────
+# -- ECS / EC2 Compute ----------------------------------------------------------
 
 variable "ecs_cluster_name" {
   description = "Name of the ECS cluster"
@@ -98,7 +98,7 @@ variable "alb_listener_port" {
   default     = 80
 }
 
-# ── Container / ECR ───────────────────────────────────────────────────────────
+# -- Container / ECR -----------------------------------------------------------
 
 variable "ecr_repository_name" {
   description = "Name of the Amazon ECR repository"
@@ -112,7 +112,7 @@ variable "container_name" {
   default     = "github-actions-app"
 }
 
-# ── RDS MySQL ─────────────────────────────────────────────────────────────────
+# -- RDS MySQL -----------------------------------------------------------------
 
 variable "db_identifier" {
   description = "Unique identifier for the RDS instance"
@@ -163,7 +163,7 @@ variable "db_backup_retention_days" {
   default     = 7
 }
 
-# ── Secrets Manager ───────────────────────────────────────────────────────────
+# -- Secrets Manager -----------------------------------------------------------
 
 variable "secrets_manager_arn" {
   description = "ARN of the AWS Secrets Manager secret containing RDS credentials"
@@ -171,7 +171,7 @@ variable "secrets_manager_arn" {
   default     = ""
 }
 
-# ── GitHub OIDC ───────────────────────────────────────────────────────────────
+# -- GitHub OIDC ---------------------------------------------------------------
 
 variable "github_org" {
   description = "GitHub organisation or user account (e.g. 'my-org'). Used to scope the OIDC trust policy."
@@ -183,7 +183,7 @@ variable "github_repo" {
   type        = string
 }
 
-# ── Tagging ───────────────────────────────────────────────────────────────────
+# -- Tagging -------------------------------------------------------------------
 
 variable "tags" {
   description = "Common tags applied to all resources"

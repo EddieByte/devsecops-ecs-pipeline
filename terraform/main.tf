@@ -1,14 +1,14 @@
-# ──────────────────────────────────────────────────────────────────────────────
-# main.tf — ECS Cluster, EC2 Launch Template, ASG, Capacity Provider,
+﻿# ------------------------------------------------------------------------------
+# main.tf - ECS Cluster, EC2 Launch Template, ASG, Capacity Provider,
 #            ECS Task Definition, ECS Service, ECR Repository, IAM Roles,
 #            CloudWatch Log Group, and AWS Secrets Manager reference.
-# ──────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 provider "aws" {
   region = var.aws_region
 }
 
-# ── Data Sources ──────────────────────────────────────────────────────────────
+# -- Data Sources --------------------------------------------------------------
 
 # Latest ECS-Optimized Amazon Linux 2023 AMI
 data "aws_ssm_parameter" "ecs_optimized_ami" {
@@ -17,7 +17,7 @@ data "aws_ssm_parameter" "ecs_optimized_ami" {
 
 data "aws_caller_identity" "current" {}
 
-# ── CloudWatch Log Group ──────────────────────────────────────────────────────
+# -- CloudWatch Log Group ------------------------------------------------------
 
 resource "aws_cloudwatch_log_group" "ecs_app" {
   name              = "/ecs/${var.ecs_cluster_name}"
@@ -26,7 +26,7 @@ resource "aws_cloudwatch_log_group" "ecs_app" {
   tags = var.tags
 }
 
-# ── IAM: ECS Task Execution Role ──────────────────────────────────────────────
+# -- IAM: ECS Task Execution Role ----------------------------------------------
 # Grants ECS agent permission to pull images and write logs.
 
 resource "aws_iam_role" "ecs_task_execution" {
@@ -67,7 +67,7 @@ resource "aws_iam_role_policy" "ecs_secrets" {
   })
 }
 
-# ── IAM: ECS Instance Role (for EC2 container instances) ─────────────────────
+# -- IAM: ECS Instance Role (for EC2 container instances) ---------------------
 
 resource "aws_iam_role" "ecs_instance" {
   name = "${var.project_name}-ecs-instance-role"
@@ -99,7 +99,7 @@ resource "aws_iam_instance_profile" "ecs_instance" {
   role = aws_iam_role.ecs_instance.name
 }
 
-# ── EC2 Launch Template ───────────────────────────────────────────────────────
+# -- EC2 Launch Template -------------------------------------------------------
 # Uses the ECS-Optimized Amazon Linux 2023 AMI.
 # User-data registers the instance to the ECS cluster automatically.
 
@@ -141,7 +141,7 @@ resource "aws_launch_template" "ecs" {
   }
 }
 
-# ── Auto Scaling Group ────────────────────────────────────────────────────────
+# -- Auto Scaling Group --------------------------------------------------------
 
 resource "aws_autoscaling_group" "ecs" {
   name                = "${var.project_name}-ecs-asg"
@@ -177,7 +177,7 @@ resource "aws_autoscaling_group" "ecs" {
   }
 }
 
-# ── ECS Cluster ───────────────────────────────────────────────────────────────
+# -- ECS Cluster ---------------------------------------------------------------
 
 resource "aws_ecs_cluster" "main" {
   name = var.ecs_cluster_name
@@ -190,7 +190,7 @@ resource "aws_ecs_cluster" "main" {
   tags = merge(var.tags, { Name = var.ecs_cluster_name })
 }
 
-# ── ECS Capacity Provider (links ASG to cluster) ──────────────────────────────
+# -- ECS Capacity Provider (links ASG to cluster) ------------------------------
 
 resource "aws_ecs_capacity_provider" "asg" {
   name = "${var.project_name}-capacity-provider"
@@ -221,9 +221,9 @@ resource "aws_ecs_cluster_capacity_providers" "main" {
   }
 }
 
-# ── ECS Task Definition ───────────────────────────────────────────────────────
+# -- ECS Task Definition -------------------------------------------------------
 # Bridge mode with dynamic host port mapping (hostPort = 0).
-# Secrets are pulled from AWS Secrets Manager at runtime — no plaintext creds.
+# Secrets are pulled from AWS Secrets Manager at runtime - no plaintext creds.
 
 resource "aws_ecs_task_definition" "app" {
   family                   = var.project_name
@@ -251,7 +251,7 @@ resource "aws_ecs_task_definition" "app" {
 
       environment = [
         { name = "SPRING_PROFILES_ACTIVE", value = "mysql" },
-        # PetClinic mysql profile reads MYSQL_URL directly — full JDBC URL as one variable.
+        # PetClinic mysql profile reads MYSQL_URL directly - full JDBC URL as one variable.
         { name = "MYSQL_URL", value = "jdbc:mysql://${aws_db_instance.main.address}:${aws_db_instance.main.port}/petclinic?useSSL=true&requireSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true" }
       ]
 
@@ -290,7 +290,7 @@ resource "aws_ecs_task_definition" "app" {
   tags = var.tags
 }
 
-# ── ECS Service ───────────────────────────────────────────────────────────────
+# -- ECS Service ---------------------------------------------------------------
 
 resource "aws_ecs_service" "app" {
   name            = var.ecs_service_name
@@ -333,7 +333,7 @@ resource "aws_ecs_service" "app" {
   tags = merge(var.tags, { Name = var.ecs_service_name })
 }
 
-# ── Outputs ───────────────────────────────────────────────────────────────────
+# -- Outputs -------------------------------------------------------------------
 
 output "ecs_cluster_name" {
   description = "ECS cluster name"
@@ -350,10 +350,10 @@ output "task_execution_role_arn" {
   value       = aws_iam_role.ecs_task_execution.arn
 }
 
-# ── Secrets Manager: Pipeline Infrastructure Values ───────────────────────────
+# -- Secrets Manager: Pipeline Infrastructure Values ---------------------------
 # Terraform writes the RDS endpoint and RDS security group ID into Secrets
 # Manager after provisioning. The GitHub Actions db-migrate workflow reads
-# these at runtime — no hardcoded values in GitHub Secrets needed.
+# these at runtime - no hardcoded values in GitHub Secrets needed.
 
 resource "aws_secretsmanager_secret" "pipeline_infra" {
   name                    = "dev/pipeline/infra"
@@ -374,7 +374,7 @@ resource "aws_secretsmanager_secret_version" "pipeline_infra" {
   })
 }
 
-# ── Outputs ───────────────────────────────────────────────────────────────────
+# -- Outputs -------------------------------------------------------------------
 
 output "pipeline_infra_secret_arn" {
   description = "ARN of the Secrets Manager secret containing pipeline infra values"

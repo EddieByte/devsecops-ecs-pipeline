@@ -1,8 +1,8 @@
-# ──────────────────────────────────────────────────────────────────────────────
+﻿# ------------------------------------------------------------------------------
 # modules/github-oidc/variables.tf
 #
 # All inputs required (or defaulted) by the github-oidc module.
-# ──────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 variable "github_org" {
   description = "GitHub organisation or user account that owns the repository (e.g. 'my-org')"
@@ -23,7 +23,7 @@ variable "role_name" {
 variable "managed_policy_arns" {
   description = <<-EOT
     List of IAM managed policy ARNs to attach to the role.
-    Add only what each job actually needs — keep this least-privilege.
+    Add only what each job actually needs - keep this least-privilege.
   EOT
   type        = list(string)
   default     = []

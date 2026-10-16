@@ -1,5 +1,5 @@
-# ──────────────────────────────────────────────────────────────────────────────
-# oidc.tf — GitHub Actions OIDC Federation
+﻿# ------------------------------------------------------------------------------
+# oidc.tf - GitHub Actions OIDC Federation
 #
 # Instantiates the github-oidc module to create:
 #   - An AWS IAM OIDC Identity Provider for token.actions.githubusercontent.com
@@ -10,19 +10,19 @@
 #   AWS_ROLE_TO_ASSUME = <role_arn output>
 #
 # No AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY are needed after this.
-# ──────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 module "github_oidc" {
   source = "./modules/github-oidc"
 
-  # ── Repository identity ────────────────────────────────────────────────────
+  # -- Repository identity ----------------------------------------------------
   # Replace these with your actual GitHub org and repo name.
   github_org  = var.github_org
   github_repo = var.github_repo
 
   role_name = "${var.project_name}-github-actions-role"
 
-  # ── Managed policies ───────────────────────────────────────────────────────
+  # -- Managed policies -------------------------------------------------------
   # ECR power user covers: ecr:GetAuthorizationToken, ecr:BatchGetImage,
   # ecr:PutImage, ecr:DescribeRepositories, etc.
   # AmazonECS_FullAccess covers: ecs:DescribeTaskDefinition,
@@ -32,7 +32,7 @@ module "github_oidc" {
     "arn:aws:iam::aws:policy/AmazonECS_FullAccess",
   ]
 
-  # ── Inline policy ──────────────────────────────────────────────────────────
+  # -- Inline policy ----------------------------------------------------------
   # Covers the permissions no managed policy above provides with the right scope:
   #   - Secrets Manager: read infra + DB credential secrets (DB_MIGRATE job)
   #   - EC2 SG: temporarily open/close port 3306 for the runner IP (DB_MIGRATE job)
@@ -65,7 +65,7 @@ module "github_oidc" {
         ]
         # Scoped to security groups in this account/region.
         # Terraform does not support resource-level conditions on SG mutations
-        # without using aws:ResourceTag conditions — add a tag condition here
+        # without using aws:ResourceTag conditions - add a tag condition here
         # if you need stricter scoping.
         Resource = "*"
       },
@@ -81,7 +81,7 @@ module "github_oidc" {
   tags = var.tags
 }
 
-# ── Outputs ───────────────────────────────────────────────────────────────────
+# -- Outputs -------------------------------------------------------------------
 
 output "github_actions_role_arn" {
   description = "Paste this into GitHub Secrets as AWS_ROLE_TO_ASSUME"

@@ -1,16 +1,16 @@
-# ──────────────────────────────────────────────────────────────────────────────
-# vpc.tf — Air-Gapped, NAT-less VPC
+﻿# ------------------------------------------------------------------------------
+# vpc.tf - Air-Gapped, NAT-less VPC
 #
 # Architecture:
-#   • Public subnets  → ALB only (internet-facing ingress)
-#   • Private subnets → ECS EC2 instances + RDS (zero outbound internet routes)
-#   • No NAT Gateway, no Elastic IP — eliminates $0.045/GB data processing cost
-#   • All AWS service traffic routes through VPC Endpoints (see vpc_endpoints.tf)
-#   • S3 Gateway Endpoint is FREE and required for ECR image layer downloads
-# ──────────────────────────────────────────────────────────────────────────────
+#   - Public subnets  -> ALB only (internet-facing ingress)
+#   - Private subnets -> ECS EC2 instances + RDS (zero outbound internet routes)
+#   - No NAT Gateway, no Elastic IP - eliminates $0.045/GB data processing cost
+#   - All AWS service traffic routes through VPC Endpoints (see vpc_endpoints.tf)
+#   - S3 Gateway Endpoint is FREE and required for ECR image layer downloads
+# ------------------------------------------------------------------------------
 
-# ── VPC ───────────────────────────────────────────────────────────────────────
-# DNS hostnames must be enabled — required for Interface Endpoint private DNS.
+# -- VPC -----------------------------------------------------------------------
+# DNS hostnames must be enabled - required for Interface Endpoint private DNS.
 
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
@@ -20,7 +20,7 @@ resource "aws_vpc" "main" {
   tags = merge(var.tags, { Name = "${var.project_name}-vpc" })
 }
 
-# ── Public Subnets (ALB only) ─────────────────────────────────────────────────
+# -- Public Subnets (ALB only) -------------------------------------------------
 
 resource "aws_subnet" "public" {
   count                   = length(var.public_subnet_cidrs)
@@ -35,7 +35,7 @@ resource "aws_subnet" "public" {
   })
 }
 
-# ── Private Subnets (ECS EC2 + RDS — air-gapped) ─────────────────────────────
+# -- Private Subnets (ECS EC2 + RDS - air-gapped) -----------------------------
 
 resource "aws_subnet" "private" {
   count             = length(var.private_subnet_cidrs)
@@ -49,7 +49,7 @@ resource "aws_subnet" "private" {
   })
 }
 
-# ── Internet Gateway (ALB public ingress only) ────────────────────────────────
+# -- Internet Gateway (ALB public ingress only) --------------------------------
 
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
@@ -57,7 +57,7 @@ resource "aws_internet_gateway" "main" {
   tags = merge(var.tags, { Name = "${var.project_name}-igw" })
 }
 
-# ── Public Route Table ────────────────────────────────────────────────────────
+# -- Public Route Table --------------------------------------------------------
 # Only the public subnets (ALB) have an internet route.
 
 resource "aws_route_table" "public" {
@@ -77,7 +77,7 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# ── Private Route Table (NO default internet route) ───────────────────────────
+# -- Private Route Table (NO default internet route) ---------------------------
 # Intentionally contains no 0.0.0.0/0 entry.
 # Traffic to AWS services reaches them exclusively via VPC Endpoints.
 # The S3 Gateway Endpoint association is declared below.
@@ -85,7 +85,7 @@ resource "aws_route_table_association" "public" {
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
 
-  # No internet route — air-gapped by design.
+  # No internet route - air-gapped by design.
 
   tags = merge(var.tags, { Name = "${var.project_name}-private-rt" })
 }
@@ -96,9 +96,9 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private.id
 }
 
-# ── S3 Gateway Endpoint (FREE) ────────────────────────────────────────────────
+# -- S3 Gateway Endpoint (FREE) ------------------------------------------------
 # ECR stores Docker image layer blobs in S3. Without this endpoint, ECS
-# instances cannot pull images — there is no other path out of the private
+# instances cannot pull images - there is no other path out of the private
 # subnet. Gateway Endpoints are free and route traffic over the AWS backbone.
 
 resource "aws_vpc_endpoint" "s3" {
@@ -110,7 +110,7 @@ resource "aws_vpc_endpoint" "s3" {
   tags = merge(var.tags, { Name = "${var.project_name}-s3-gateway-endpoint" })
 }
 
-# ── Security Group: Application Load Balancer ─────────────────────────────────
+# -- Security Group: Application Load Balancer ---------------------------------
 # Accepts inbound HTTP on port 80 from the internet.
 
 resource "aws_security_group" "alb" {
@@ -137,9 +137,9 @@ resource "aws_security_group" "alb" {
   tags = merge(var.tags, { Name = "${var.project_name}-alb-sg" })
 }
 
-# ── Security Group: ECS EC2 Instances ─────────────────────────────────────────
+# -- Security Group: ECS EC2 Instances -----------------------------------------
 # Ingress: dynamic host ports from ALB only.
-# Egress:  HTTPS (443) to VPC CIDR only — reaches all Interface Endpoints.
+# Egress:  HTTPS (443) to VPC CIDR only - reaches all Interface Endpoints.
 #          No 0.0.0.0/0 outbound route; enforces the air-gap at SG level too.
 
 resource "aws_security_group" "ecs_ec2" {
@@ -176,7 +176,7 @@ resource "aws_security_group" "ecs_ec2" {
   tags = merge(var.tags, { Name = "${var.project_name}-ecs-ec2-sg" })
 }
 
-# ── Security Group: VPC Interface Endpoints ───────────────────────────────────
+# -- Security Group: VPC Interface Endpoints -----------------------------------
 # Accepts inbound HTTPS from any resource inside the VPC.
 # Used by all Interface Endpoints declared in vpc_endpoints.tf.
 
@@ -204,7 +204,7 @@ resource "aws_security_group" "vpc_endpoints" {
   tags = merge(var.tags, { Name = "${var.project_name}-vpc-endpoints-sg" })
 }
 
-# ── Security Group: RDS MySQL ─────────────────────────────────────────────────
+# -- Security Group: RDS MySQL -------------------------------------------------
 # Accepts MySQL traffic on 3306 exclusively from the ECS EC2 SG (zero-trust).
 
 resource "aws_security_group" "rds" {
@@ -231,8 +231,8 @@ resource "aws_security_group" "rds" {
   tags = merge(var.tags, { Name = "${var.project_name}-rds-sg" })
 }
 
-# ── Application Load Balancer ─────────────────────────────────────────────────
-# Deployed in public subnets — the only internet-facing component.
+# -- Application Load Balancer -------------------------------------------------
+# Deployed in public subnets - the only internet-facing component.
 
 resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
@@ -246,7 +246,7 @@ resource "aws_lb" "main" {
   tags = merge(var.tags, { Name = "${var.project_name}-alb" })
 }
 
-# ── ALB Target Group (bridge mode — dynamic port mapping) ─────────────────────
+# -- ALB Target Group (bridge mode - dynamic port mapping) ---------------------
 
 resource "aws_lb_target_group" "app" {
   name        = "${var.project_name}-tg"
@@ -270,7 +270,7 @@ resource "aws_lb_target_group" "app" {
   tags = merge(var.tags, { Name = "${var.project_name}-tg" })
 }
 
-# ── ALB Listener: port 80 → target group ──────────────────────────────────────
+# -- ALB Listener: port 80 -> target group --------------------------------------
 
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
@@ -283,7 +283,7 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# ── Outputs ───────────────────────────────────────────────────────────────────
+# -- Outputs -------------------------------------------------------------------
 
 output "vpc_id" {
   description = "VPC ID"

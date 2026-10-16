@@ -1,10 +1,10 @@
-# ──────────────────────────────────────────────────────────────────────────────
+﻿# ------------------------------------------------------------------------------
 # RDS MySQL 8.0.35
 # Provisions: DB subnet group, parameter group, and the RDS instance.
-# publicly_accessible = false — accessible only from ECS EC2 SG via port 3306.
-# ──────────────────────────────────────────────────────────────────────────────
+# publicly_accessible = false - accessible only from ECS EC2 SG via port 3306.
+# ------------------------------------------------------------------------------
 
-# ── DB Subnet Group (private subnets only) ────────────────────────────────────
+# -- DB Subnet Group (private subnets only) ------------------------------------
 
 resource "aws_db_subnet_group" "main" {
   name        = "${var.project_name}-db-subnet-group"
@@ -14,7 +14,7 @@ resource "aws_db_subnet_group" "main" {
   tags = merge(var.tags, { Name = "${var.project_name}-db-subnet-group" })
 }
 
-# ── MySQL 8.0 Parameter Group ─────────────────────────────────────────────────
+# -- MySQL 8.0 Parameter Group -------------------------------------------------
 
 resource "aws_db_parameter_group" "mysql8" {
   name        = "${var.project_name}-mysql8-params"
@@ -49,7 +49,7 @@ resource "aws_db_parameter_group" "mysql8" {
   tags = merge(var.tags, { Name = "${var.project_name}-mysql8-params" })
 }
 
-# ── RDS MySQL 8.0.35 Instance ─────────────────────────────────────────────────
+# -- RDS MySQL 8.0.35 Instance -------------------------------------------------
 
 resource "aws_db_instance" "main" {
   identifier = var.db_identifier
@@ -65,7 +65,7 @@ resource "aws_db_instance" "main" {
   storage_type          = "gp2"
   storage_encrypted     = true
 
-  # Credentials — source of truth is Secrets Manager; these bootstrap the instance.
+  # Credentials - source of truth is Secrets Manager; these bootstrap the instance.
   db_name  = var.db_name
   username = var.db_username
   password = var.db_password
@@ -88,14 +88,14 @@ resource "aws_db_instance" "main" {
   deletion_protection       = false
   skip_final_snapshot = true
 
-  # Monitoring — enhanced monitoring disabled for dev (requires a separate IAM role)
+  # Monitoring - enhanced monitoring disabled for dev (requires a separate IAM role)
   performance_insights_enabled = false
   monitoring_interval          = 0
 
   tags = merge(var.tags, { Name = "${var.project_name}-mysql-db" })
 }
 
-# ── Outputs ───────────────────────────────────────────────────────────────────
+# -- Outputs -------------------------------------------------------------------
 
 output "rds_endpoint" {
   description = "RDS instance endpoint (hostname:port)"

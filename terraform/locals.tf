@@ -1,16 +1,16 @@
-# ──────────────────────────────────────────────────────────────────────────────
-# locals.tf — Centralised naming prefix and common tags
+﻿# ------------------------------------------------------------------------------
+# locals.tf - Centralised naming prefix and common tags
 #
 # All resource names are derived from a single name_prefix local so that
 # renaming the project or changing environment only requires updating
-# variables.tf — nothing else changes.
-# ──────────────────────────────────────────────────────────────────────────────
+# variables.tf - nothing else changes.
+# ------------------------------------------------------------------------------
 
 locals {
   # Single prefix used across every resource name
   name_prefix = "${var.project_name}-${var.environment}"
 
-  # ── Standardised resource names ─────────────────────────────────────────────
+  # -- Standardised resource names ---------------------------------------------
   vpc_name          = "${local.name_prefix}-vpc"
   ecr_repo_name     = "${local.name_prefix}-app"
   ecs_cluster_name  = "${local.name_prefix}-cluster"
@@ -18,7 +18,7 @@ locals {
   alb_name          = "${local.name_prefix}-alb"
   rds_identifier    = "${local.name_prefix}-db"
 
-  # ── Common tags applied to every resource ────────────────────────────────────
+  # -- Common tags applied to every resource ------------------------------------
   common_tags = {
     Project     = var.project_name
     Environment = var.environment

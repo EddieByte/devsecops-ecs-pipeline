@@ -1,13 +1,13 @@
-# ──────────────────────────────────────────────────────────────────────────────
-# ecr.tf — Amazon ECR Repository
+﻿# ------------------------------------------------------------------------------
+# ecr.tf - Amazon ECR Repository
 #
 # Extracted from main.tf for separation of concerns.
 # Uses KMS encryption (upgrade from AES256) for audit-grade key management.
 # Lifecycle policy keeps the last 10 images of any tag status and removes
 # untagged images older than 7 days to control storage costs.
-# ──────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
-# ── KMS Key for ECR encryption ────────────────────────────────────────────────
+# -- KMS Key for ECR encryption ------------------------------------------------
 
 resource "aws_kms_key" "ecr" {
   description             = "KMS key for ECR repository encryption"
@@ -22,7 +22,7 @@ resource "aws_kms_alias" "ecr" {
   target_key_id = aws_kms_key.ecr.key_id
 }
 
-# ── ECR Repository ────────────────────────────────────────────────────────────
+# -- ECR Repository ------------------------------------------------------------
 
 resource "aws_ecr_repository" "app" {
   name                 = var.ecr_repository_name
@@ -41,7 +41,7 @@ resource "aws_ecr_repository" "app" {
   tags = merge(local.common_tags, { Name = var.ecr_repository_name })
 }
 
-# ── ECR Lifecycle Policy ──────────────────────────────────────────────────────
+# -- ECR Lifecycle Policy ------------------------------------------------------
 
 resource "aws_ecr_lifecycle_policy" "app" {
   repository = aws_ecr_repository.app.name
@@ -62,7 +62,7 @@ resource "aws_ecr_lifecycle_policy" "app" {
   })
 }
 
-# ── Outputs ───────────────────────────────────────────────────────────────────
+# -- Outputs -------------------------------------------------------------------
 
 output "ecr_repository_url" {
   description = "ECR repository URL"
