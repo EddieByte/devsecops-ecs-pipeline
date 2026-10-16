@@ -18,7 +18,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>4.1.2</version>
+    <version>4.1.1</version>
     <relativePath/>
   </parent>
 
@@ -41,6 +41,10 @@
     <sonar.java.binaries>target/classes</sonar.java.binaries>
     <sonar.junit.reportsPath>target/surefire-reports</sonar.junit.reportsPath>
     <sonar.jacoco.reportsPath>target/jacoco.exec</sonar.jacoco.reportsPath>
+
+    <!-- Override Tomcat to pull in CVE-2026-65182, CVE-2026-65905, CVE-2026-68525 fixes.
+         Boot 4.1.1 BOM pins 11.0.24; 11.0.25 is the patched version. -->
+    <tomcat.version>11.0.25</tomcat.version>
   </properties>
 
   <!-- ── Dependencies ────────────────────────────────────────────────────── -->
