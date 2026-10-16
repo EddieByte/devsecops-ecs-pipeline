@@ -38,8 +38,8 @@ COPY src ./src
 RUN mvn clean package -DskipTests -B --no-transfer-progress
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────────
-# Use JRE-only image — smaller surface area, no compiler toolchain at runtime.
-FROM eclipse-temurin:17-jre-jammy AS runtime
+# Use JRE-only image on Ubuntu 24.04 (Noble) — fewer CVEs than Jammy, smaller attack surface.
+FROM eclipse-temurin:17-jre-noble AS runtime
 
 LABEL maintainer="devops@example.com" \
       org.opencontainers.image.title="spring-petclinic" \
