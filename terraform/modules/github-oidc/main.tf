@@ -56,11 +56,10 @@ resource "aws_iam_role" "github_actions" {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
-          # StringLike allows any ref (branch, tag, environment) in this repo.
-          # To lock down to tags only, change to:
-          #   "repo:${var.github_org}/${var.github_repo}:ref:refs/tags/*"
+          # StringLike matches the exact sub format GitHub sends:
+          # "repo:<org>@<org_id>/<repo>@<repo_id>:ref:refs/tags/*"
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_org}/${var.github_repo}:*"
+            "token.actions.githubusercontent.com:sub" = "repo:${var.github_org}@${var.github_org_id}/${var.github_repo}@${var.github_repo_id}:*"
           }
         }
       }

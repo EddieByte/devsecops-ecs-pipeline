@@ -173,6 +173,16 @@ variable "secrets_manager_arn" {
 
 # -- GitHub OIDC ---------------------------------------------------------------
 
+variable "github_org_id" {
+  description = "GitHub organisation or user numeric ID (from OIDC token sub claim)"
+  type        = string
+}
+
+variable "github_repo_id" {
+  description = "GitHub repository numeric ID (from OIDC token sub claim)"
+  type        = string
+}
+
 variable "github_org" {
   description = "GitHub organisation or user account (e.g. 'my-org'). Used to scope the OIDC trust policy."
   type        = string

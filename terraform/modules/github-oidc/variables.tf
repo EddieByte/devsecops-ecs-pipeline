@@ -4,6 +4,16 @@
 # All inputs required (or defaulted) by the github-oidc module.
 # ------------------------------------------------------------------------------
 
+variable "github_org_id" {
+  description = "GitHub organisation or user numeric ID. Found in the OIDC token sub claim as 'EddieByte@<id>'. Run the debug step in the workflow to find it."
+  type        = string
+}
+
+variable "github_repo_id" {
+  description = "GitHub repository numeric ID. Found in the OIDC token sub claim as 'repo-name@<id>'. Run the debug step in the workflow to find it."
+  type        = string
+}
+
 variable "github_org" {
   description = "GitHub organisation or user account that owns the repository (e.g. 'my-org')"
   type        = string

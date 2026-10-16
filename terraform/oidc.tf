@@ -17,8 +17,10 @@ module "github_oidc" {
 
   # -- Repository identity ----------------------------------------------------
   # Replace these with your actual GitHub org and repo name.
-  github_org  = var.github_org
-  github_repo = var.github_repo
+  github_org    = var.github_org
+  github_repo   = var.github_repo
+  github_org_id  = var.github_org_id
+  github_repo_id = var.github_repo_id
 
   role_name = "${var.project_name}-github-actions-role"
 
