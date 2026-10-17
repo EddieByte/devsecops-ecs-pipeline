@@ -282,7 +282,7 @@ resource "aws_ecs_task_definition" "app" {
         interval    = 30
         timeout     = 5
         retries     = 3
-        startPeriod = 60
+        startPeriod = 90
       }
     }
   ])
@@ -310,11 +310,20 @@ resource "aws_ecs_service" "app" {
     container_port   = var.container_port
   }
 
-  # 30-second grace period lets the JVM start before ALB health checks begin
-  health_check_grace_period_seconds = 30
+  # 90-second grace period — JVM startup + Flyway migration can take 60-90s
+  # before /actuator/health returns 200. Too short causes false unhealthy kills.
+  health_check_grace_period_seconds = 90
 
   deployment_minimum_healthy_percent = 50
   deployment_maximum_percent         = 200
+
+  # Circuit breaker: stops retrying after repeated task failures instead of
+  # hanging indefinitely. Prevents RESOURCE:MEMORY or image pull failures
+  # from blocking the pipeline for 20+ minutes.
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = false
+  }
 
   ordered_placement_strategy {
     type  = "spread"
