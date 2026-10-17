@@ -6,16 +6,9 @@
 # reducing cost and operational overhead.
 #
 # HOW TO ENABLE REMOTE STATE:
-#   1. Create the S3 bucket (only needed once):
-#      aws s3api create-bucket --bucket github-actions-tfstate-489205146758 --region us-east-1
-#      aws s3api put-bucket-versioning --bucket github-actions-tfstate-489205146758 --versioning-configuration Status=Enabled
-#      aws s3api put-bucket-encryption --bucket github-actions-tfstate-489205146758 \
-#        --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
-#
-#   2. Uncomment the backend "s3" block below.
-#
-#   3. Run: terraform init -migrate-state
-#      Terraform will copy the local state into S3 automatically.
+#   1. Run bootstrap_s3.ps1 to create the bucket (only needed once per account).
+#   2. Run: terraform init
+#      Terraform will connect to the bucket automatically.
 #
 # WHY NO DYNAMODB:
 #   Terraform 1.11+ uses S3 conditional writes for locking - a lightweight

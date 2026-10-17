@@ -69,6 +69,14 @@ if ($LASTEXITCODE -eq 0) {
     --bucket $BucketName `
     --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
 
+  # -- Lifecycle rule: expire old state versions after 30 days ---------------
+  # Keeps recent history for recovery but prevents unbounded version accumulation.
+  Write-Host "Adding lifecycle rule for old version expiry..." -ForegroundColor Cyan
+  $lifecycle = '{"Rules":[{"ID":"expire-old-state-versions","Status":"Enabled","Filter":{},"NoncurrentVersionExpiration":{"NoncurrentDays":30},"ExpiredObjectDeleteMarker":true}]}'
+  aws s3api put-bucket-lifecycle-configuration `
+    --bucket $BucketName `
+    --lifecycle-configuration $lifecycle
+
   Write-Host "Bucket created successfully." -ForegroundColor Green
 }
 
