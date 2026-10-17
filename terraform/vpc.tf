@@ -105,7 +105,10 @@ resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type = "Gateway"
-  route_table_ids   = [aws_route_table.private.id]
+  # Attach to ALL private route tables so every private subnet can reach S3.
+  # Previously only one route table was attached, causing image pull timeouts
+  # for instances placed in the second private subnet.
+  route_table_ids   = aws_route_table.private[*].id
 
   tags = merge(var.tags, { Name = "${var.project_name}-s3-gateway-endpoint" })
 }
@@ -157,11 +160,23 @@ resource "aws_security_group" "ecs_ec2" {
 
   # HTTPS to VPC Endpoints (ECR, ECS agent, Secrets Manager, CloudWatch, SSM)
   egress {
-    description = "HTTPS to VPC Interface Endpoints and S3 Gateway Endpoint"
+    description = "HTTPS to VPC Interface Endpoints"
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = [var.vpc_cidr]
+  }
+
+  # HTTPS to S3 via Gateway Endpoint.
+  # S3 gateway endpoint routes to public S3 IPs (not in VPC CIDR) so a
+  # separate prefix list rule is required - the VPC CIDR rule above does
+  # not cover these addresses and causes i/o timeout on ECR image pulls.
+  egress {
+    description     = "HTTPS to S3 via gateway endpoint prefix list"
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    prefix_list_ids = [aws_vpc_endpoint.s3.prefix_list_id]
   }
 
   # MySQL to RDS within the VPC

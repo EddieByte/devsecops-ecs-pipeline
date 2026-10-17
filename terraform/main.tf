@@ -252,7 +252,7 @@ resource "aws_ecs_task_definition" "app" {
       environment = [
         { name = "SPRING_PROFILES_ACTIVE", value = "mysql" },
         # PetClinic mysql profile reads MYSQL_URL directly - full JDBC URL as one variable.
-        { name = "MYSQL_URL", value = "jdbc:mysql://${aws_db_instance.main.address}:${aws_db_instance.main.port}/petclinic?useSSL=true&requireSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true" }
+        { name = "MYSQL_URL", value = "jdbc:mysql://${aws_db_instance.main.address}:${aws_db_instance.main.port}/petclinic?createDatabaseIfNotExist=true&useSSL=true&requireSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true" }
       ]
 
       secrets = [
