@@ -9,7 +9,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 param(
-    [string]$Cluster = "github-actions-app",
+    [string]$Cluster = "petclinic-cluster",
     [string]$Region  = "us-east-1"
 )
 
@@ -59,7 +59,7 @@ Write-Host ""
 Write-Host "Check service status:" -ForegroundColor Cyan
 aws ecs describe-services `
     --cluster $Cluster `
-    --services github-actions-svc `
+    --services petclinic-svc `
     --region $Region `
     --query "services[0].{running:runningCount,pending:pendingCount,desired:desiredCount}" `
     --output table

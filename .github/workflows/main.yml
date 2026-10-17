@@ -27,11 +27,11 @@ permissions:
 env:
   AWS_REGION:     ${{ secrets.AWS_REGION }}
   ECR_REGISTRY:   ${{ secrets.REGISTRY }}
-  IMAGE_NAME:       github-actions
-  ECS_CLUSTER:      github-actions-app
-  ECS_SERVICE:      github-actions-svc
-  TASK_FAMILY:      github-actions
-  CONTAINER_NAME:   github-actions-app
+  IMAGE_NAME:       petclinic
+  ECS_CLUSTER:      petclinic-cluster
+  ECS_SERVICE:      petclinic-svc
+  TASK_FAMILY:      petclinic
+  CONTAINER_NAME:   petclinic-app
   # Derives "dev" or "prod" from the tag prefix (dev/v1.0.0  dev)
   APP_ENV:        ${{ startsWith(github.ref_name, 'prod/') && 'prod' || 'dev' }}
 

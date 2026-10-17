@@ -30,7 +30,7 @@ if (-not $AccountId) {
   exit 1
 }
 
-$BucketName = "github-actions-tfstate-$AccountId"
+$BucketName = "petclinic-tfstate-$AccountId"
 
 Write-Host ""
 Write-Host "Account : $AccountId"

@@ -9,13 +9,13 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 param(
-    [string]$Cluster       = "github-actions-app",
-    [string]$Service       = "github-actions-svc",
-    [string]$TaskFamily    = "github-actions",
+    [string]$Cluster       = "petclinic-cluster",
+    [string]$Service       = "petclinic-svc",
+    [string]$TaskFamily    = "petclinic",
     [string]$Region        = "us-east-1",
     [int]   $DesiredCount  = 1,
-    [int]   $TaskMemory    = 1536,
-    [int]   $TaskCpu       = 512
+    [int]   $TaskMemory    = 2048,
+    [int]   $TaskCpu       = 1024
 )
 
 Set-StrictMode -Version Latest

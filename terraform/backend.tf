@@ -35,7 +35,7 @@ terraform {
 
   # -- Remote State ----------------------------------------------------------
   backend "s3" {
-    bucket       = "github-actions-tfstate-997450571655"
+    bucket       = "petclinic-tfstate-997450571655"
     key          = "dev/ecs-ec2-pipeline.tfstate"
     region       = "us-east-1"
     encrypt      = true

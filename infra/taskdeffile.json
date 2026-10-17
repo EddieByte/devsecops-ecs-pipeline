@@ -1,15 +1,14 @@
 {
-  "family": "github-actions-app",
+  "family": "petclinic",
   "networkMode": "bridge",
   "requiresCompatibilities": ["EC2"],
-  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskRole",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/petclinic-ecs-task-execution-role",
   "cpu": "1024",
   "memory": "2048",
   "containerDefinitions": [
     {
-      "name": "github-actions-app",
-      "image": "ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/github-actions:latest",
+      "name": "petclinic-app",
+      "image": "ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/petclinic:latest",
       "essential": true,
       "portMappings": [
         {
@@ -25,7 +24,7 @@
         },
         {
           "name": "MYSQL_URL",
-          "value": "jdbc:mysql://YOUR_RDS_ENDPOINT.rds.amazonaws.com:3306/petclinic?useSSL=true&requireSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+          "value": "jdbc:mysql://YOUR_RDS_ENDPOINT.rds.amazonaws.com:3306/petclinic?createDatabaseIfNotExist=true&useSSL=true&requireSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
         }
       ],
       "secrets": [
@@ -41,7 +40,7 @@
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/github-actions-app",
+          "awslogs-group": "/ecs/petclinic-cluster",
           "awslogs-region": "us-east-1",
           "awslogs-stream-prefix": "ecs"
         }
@@ -54,7 +53,7 @@
         "interval": 30,
         "timeout": 5,
         "retries": 3,
-        "startPeriod": 60
+        "startPeriod": 90
       },
       "mountPoints": [],
       "volumesFrom": []
@@ -62,7 +61,7 @@
   ],
   "volumes": [],
   "tags": [
-    { "key": "Project",     "value": "github-actions-app" },
+    { "key": "Project",     "value": "petclinic" },
     { "key": "Environment", "value": "dev" },
     { "key": "ManagedBy",   "value": "terraform" }
   ]

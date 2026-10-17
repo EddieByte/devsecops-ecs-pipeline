@@ -26,9 +26,9 @@
 
 param(
   [string]$Region  = "us-east-1",
-  [string]$Cluster = "github-actions-app",
-  [string]$Service = "github-actions-svc",
-  [string]$Asg     = "github-actions-ecs-asg"
+  [string]$Cluster = "petclinic-cluster",
+  [string]$Service = "petclinic-svc",
+  [string]$Asg     = "petclinic-ecs-asg"
 )
 
 Set-StrictMode -Version Latest

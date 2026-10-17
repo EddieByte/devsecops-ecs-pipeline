@@ -7,7 +7,7 @@
 variable "project_name" {
   description = "Project name used as a prefix for all resource names"
   type        = string
-  default     = "github-actions"
+  default     = "petclinic"
 }
 
 variable "environment" {
@@ -47,13 +47,13 @@ variable "availability_zones" {
 variable "ecs_cluster_name" {
   description = "Name of the ECS cluster"
   type        = string
-  default     = "github-actions-app"
+  default     = "petclinic-cluster"
 }
 
 variable "ecs_service_name" {
   description = "Name of the ECS service"
   type        = string
-  default     = "github-actions-svc"
+  default     = "petclinic-svc"
 }
 
 variable "ec2_instance_type" {
@@ -108,13 +108,13 @@ variable "alb_listener_port" {
 variable "ecr_repository_name" {
   description = "Name of the Amazon ECR repository"
   type        = string
-  default     = "github-actions"
+  default     = "petclinic"
 }
 
 variable "container_name" {
   description = "Name of the container inside the ECS task definition"
   type        = string
-  default     = "github-actions-app"
+  default     = "petclinic-app"
 }
 
 # -- RDS MySQL -----------------------------------------------------------------
@@ -122,7 +122,7 @@ variable "container_name" {
 variable "db_identifier" {
   description = "Unique identifier for the RDS instance"
   type        = string
-  default     = "github-actions-db"
+  default     = "petclinic-db"
 }
 
 variable "db_engine_version" {
@@ -204,7 +204,7 @@ variable "tags" {
   description = "Common tags applied to all resources"
   type        = map(string)
   default = {
-    Project     = "github-actions-app"
+    Project     = "petclinic"
     Environment = "dev"
     ManagedBy   = "terraform"
   }
